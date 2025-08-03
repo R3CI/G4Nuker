@@ -1,7 +1,6 @@
 import os
 import re
 import requests
-import json
 import time
 import base64
 from concurrent.futures import ThreadPoolExecutor
