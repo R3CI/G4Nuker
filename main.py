@@ -581,7 +581,7 @@ https://media.discordapp.net/attachments/1106849767029477429/1114248605952397363
 '''}
                 )
                 if r.status_code in (200, 204):
-                    pass
+                    console.log(console.SUCCESS, f'Spammed webhook id={hook["id"]}')
 
                 elif r.status_code == 429:
                     retry = r.json().get('retry_after', 1)
