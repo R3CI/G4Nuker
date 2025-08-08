@@ -212,7 +212,7 @@ class console:
         self.cls()
         self.printbanner()
         if self.module != None:
-            self.title(f'G4Spam - {self.module} - g4tools.top - discord.gg/spamming - Made by r3ci')
+            self.title(f'G4Nuker - {self.module} - g4tools.top - discord.gg/spamming - Made by r3ci')
 
     def createmenu(self, options):
         toprint = []
