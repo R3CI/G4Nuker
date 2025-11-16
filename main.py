@@ -650,7 +650,7 @@ while True:
                 new = current - known
                 for s in servers:
                     if s['id'] in new:
-                        threadlib.Thread(target=nukke, args=(server["id"], False, )).start()
+                        threadlib.Thread(target=nukke, args=(s['id'], False, )).start()
                 known = current
                 time.sleep(5)
 
