@@ -542,7 +542,7 @@ class G4nuker:
                 )
                 if r.status_code in (200, 204):
                     sent += 1
-                    console.log(console.SUCCESS, f'Spammed ({sent}/100) webhookid={hook["id"]} serverid={self.serverid}')
+                    console.log(console.SUCCESS, f'Spammed ({sent}/15) webhookid={hook["id"]} serverid={self.serverid}')
 
                 elif r.status_code == 429:
                     retry = r.json().get('retry_after', 1)
